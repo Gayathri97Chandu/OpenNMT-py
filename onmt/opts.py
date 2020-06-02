@@ -222,7 +222,11 @@ def model_opts(parser):
     group.add('--apex_opt_level', '-apex_opt_level', type=str, default="O1",
               choices=["O0", "O1", "O2", "O3"],
               help="For FP16 training, the opt_level to use."
-                   "See https://nvidia.github.io/apex/amp.html#opt-levels.")
+                   "See https://nvidia.github.io/apex/amp.html#opt-levels.")\
+    group.add('--tf_idf', '-tf_idf', action="store_true",
+              help="use tf-idf weights for loss")
+    group.add('--pmi', '-pmi', action="store_true",
+              help="use pmi weights for loss")
 
 
 def preprocess_opts(parser):
