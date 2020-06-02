@@ -41,6 +41,53 @@ def build_loss_compute(model, tgt_field, opt, train=True):
         )
     elif isinstance(model.generator[-1], LogSparsemax):
         criterion = SparsemaxLoss(ignore_index=padding_idx, reduction='sum')
+    elif opt.tf_idf:
+        vocab=torch.load(opt.data+'.vocab.pt')
+        tgt_freqs=vocab['tgt'].fields[0][1].vocab.freqs
+        tgt_idx=vocab['tgt'].fields[0][1].vocab.stoi
+        src_idx=vocab['src'].fields[0][1].vocab.stoi
+        weights=[]
+        count=0
+        vocab_size=sum(tgt_freqs.values())
+        for key in tgt_idx:
+            count=count+1
+            if(count<=4):
+                weights.append(1)
+            else:
+                prob=tgt_freqs[key]/vocab_size
+                if key in src_idx:
+                    tfidf=1
+                else:
+                    idf=math.log(2/1)
+                    tfidf=(prob*idf)+1
+                weights.append(tfidf)
+        w=torch.FloatTensor(weights)
+        criterion = nn.NLLLoss(weight=w,ignore_index=padding_idx, reduction='sum')
+    elif opt.pmi:
+        vocab=torch.load(opt.data+'.vocab.pt')
+        tgt_freqs=vocab['tgt'].fields[0][1].vocab.freqs
+        src_freqs=vocab['src'].fields[0][1].vocab.freqs
+        tgt_idx=vocab['tgt'].fields[0][1].vocab.stoi
+        src_idx=vocab['src'].fields[0][1].vocab.stoi
+        weights=[]
+        count=0
+        tgt_vocab_size=sum(tgt_freqs.values())
+        total_vocab_size=tgt_vocab_size+sum(src_freqs.values())
+        for key in tgt_idx:
+            count=count+1
+            if(count<=4):
+                weights.append(1)
+            else:
+                num_prob=tgt_freqs[key]/tgt_vocab_size
+                if key in src_idx:
+                    den_prob=(tgt_freqs[key]+src_freqs[key])/total_vocab_size
+                else:
+                    den_prob=tgt_freqs[key]/total_vocab_size
+                pmi=(num_prob/den_prob)+1
+                weights.append(pmi)
+        w=torch.FloatTensor(weights)
+        criterion = nn.NLLLoss(weight=w,ignore_index=padding_idx, reduction='sum')
+
     else:
         criterion = nn.NLLLoss(ignore_index=padding_idx, reduction='sum')
 
